@@ -1,4 +1,5 @@
-from app.models.models import UserData, ProductData
+from app.models.product import Product
+from app.models.user import User
 from app.services.product_service import ProductService
 from app.storage.base_storage import BaseStorage
 
@@ -8,31 +9,31 @@ class UserService:
         self.storage = storage
         self.product_storage = product_storage
 
-    def create_user(self, user_data: UserData) -> UserData:
+    def create_user(self, user_data: User) -> User:
         return self.storage.save(user_data)
 
-    def get_users(self) -> list[UserData]:
+    def get_users(self) -> list[User]:
         users = self.storage.get()
         for user in users:
             self._load_user_products(user)
         return users
 
-    def get_user_by_id(self, user_id: int) -> UserData | None:
+    def get_user_by_id(self, user_id: int) -> User | None:
         user = self.storage.get_by_id(user_id)
         if user:
             self._load_user_products(user)
         return user
 
-    def delete_user(self, user_id: int) -> UserData | None:
+    def delete_user(self, user_id: int) -> User | None:
         return self.storage.delete(user_id)
 
-    def get_user_products(self, user_id: int) -> list[ProductData]:
+    def get_user_products(self, user_id: int) -> list[Product]:
         user = self.get_user_by_id(user_id)
         if not user:
             return []
         return user.products
 
-    def get_user_product(self, user_id: int, product_id: int) -> ProductData | None:
+    def get_user_product(self, user_id: int, product_id: int) -> Product | None:
         user = self.get_user_by_id(user_id)
         if not user:
             return None
@@ -45,6 +46,6 @@ class UserService:
 
         return product
 
-    def _load_user_products(self, user: UserData) -> None:
+    def _load_user_products(self, user: User) -> None:
         product_service = ProductService(self.product_storage)
         user.products = product_service.get_products_by_user_id(user.id)

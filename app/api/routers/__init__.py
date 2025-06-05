@@ -9,6 +9,6 @@ router.include_router(users_router)
 router.include_router(products_router)
 
 
-@router.get("/")
+@router.get("/status")
 def root() -> dict[str, str]:
     return {"message": "Это сервис Fast API"}

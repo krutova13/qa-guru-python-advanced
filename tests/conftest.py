@@ -1,35 +1,41 @@
+import os
+
+import dotenv as dotenv
 import pytest
 import requests
-from jsonschema import validate
 from requests import Response
-from starlette import status
 
-BASE_URL = "http://localhost:8000/api/v1"
+PREFIX = "/api/v1"
+
+
+@pytest.fixture(autouse=True)
+def envs():
+    dotenv.load_dotenv()
+    if not os.getenv("APP_URL"):
+        raise ValueError(f"APP_URL не найден в .env файле")
 
 
 @pytest.fixture(scope="function")
-def api_client():
+def api_client(envs):
     session = requests.Session()
-    session.base_url = BASE_URL
+    session.base_url = f"{os.getenv('APP_URL')}{PREFIX}"
     yield session
     session.close()
 
 
-@pytest.fixture(autouse=True)
-def cleanup_database(api_client):
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_database(api_client: requests.Session):
     yield
 
-    products = api_client.get(f"{api_client.base_url}/products").json()
-    for product in products:
+    for product in get_all_items(api_client, "products"):
         api_client.delete(f"{api_client.base_url}/products/{product['id']}")
 
-    users = api_client.get(f"{api_client.base_url}/users").json()
-    for user in users:
+    for user in get_all_items(api_client, "users"):
         api_client.delete(f"{api_client.base_url}/users/{user['id']}")
 
 
 @pytest.fixture
-def create_user(api_client):
+def create_user(api_client: requests.Session):
     def _create_user(user_data: dict) -> Response:
         return api_client.post(f"{api_client.base_url}/users", json=user_data)
 
@@ -37,7 +43,7 @@ def create_user(api_client):
 
 
 @pytest.fixture
-def create_product(api_client):
+def create_product(api_client: requests.Session):
     def _create_product(product_data: dict) -> Response:
         return api_client.post(f"{api_client.base_url}/products", json=product_data)
 
@@ -77,17 +83,18 @@ def valid_product() -> dict:
     }
 
 
-def assert_response_ok(response: Response) -> None:
-    assert response.status_code == status.HTTP_200_OK
+def get_all_items(api_client: requests.Session, endpoint: str) -> list:
+    all_items = []
+    page = 1
+    while True:
+        response = api_client.get(
+            f"{api_client.base_url}/{endpoint}",
+            params={"page": page, "size": 100}
+        )
+        data = response.json()
+        all_items.extend(data["items"])
 
-
-def assert_response_not_found(response: Response) -> None:
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-def assert_response_unprocessable_entity(response: Response) -> None:
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-def validate_response_schema(response: Response, schema: dict) -> None:
-    validate(instance=response.json(), schema=schema)
+        if page >= data["pages"]:
+            break
+        page += 1
+    return all_items

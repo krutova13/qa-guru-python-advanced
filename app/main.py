@@ -1,13 +1,14 @@
 from fastapi import FastAPI
+from fastapi_pagination import add_pagination
 
-from api.routers import router
+from app.api.routers import router
 
 app = FastAPI(
     title="FastAPI Project",
     description="API для пользователей и их продуктов",
     version="1.0.0"
 )
-
+add_pagination(app)
 app.include_router(router, prefix="/api/v1")
 
 if __name__ == "__main__":

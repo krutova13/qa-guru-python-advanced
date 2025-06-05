@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import TypeVar, Generic, Type
 
-from app.models.models import UserData, ProductData
+from app.models.user import User, Product
 from app.storage.base_storage import BaseStorage
 
 T = TypeVar('T')
@@ -16,9 +16,9 @@ class FileStorage(BaseStorage[T], Generic[T]):
         self._ensure_file_exists()
 
     def _get_file_path(self) -> Path:
-        if self.model_type == UserData:
+        if self.model_type == User:
             return Path("storage/users.json")
-        elif self.model_type == ProductData:
+        elif self.model_type == Product:
             return Path("storage/products.json")
         else:
             return Path("storage/data.json")

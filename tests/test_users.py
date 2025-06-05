@@ -22,21 +22,15 @@ def test_create_user(api_client, valid_user: dict):
 
 
 def test_get_all_users(api_client, create_user, valid_user: dict):
-    create_response: Response = create_user(valid_user)
-    assert create_response.status_code == HTTPStatus.OK
-
     response: Response = api_client.get(f"{api_client.base_url}/users")
     assert response.status_code == HTTPStatus.OK
 
-    users: List[User] = [User.model_validate(user) for user in response.json()]
+    users: List[User] = [User.model_validate(user) for user in response.json()["items"]]
     assert len(users) > 0
     assert any(user.id == valid_user["id"] for user in users)
 
 
 def test_get_user_by_id(api_client, create_user, valid_user: dict):
-    create_response: Response = create_user(valid_user)
-    assert create_response.status_code == HTTPStatus.OK
-
     response: Response = api_client.get(f"{api_client.base_url}/users/{valid_user['id']}")
     assert response.status_code == HTTPStatus.OK
 
@@ -51,9 +45,6 @@ def test_get_nonexistent_user(api_client):
 
 
 def test_delete_user(api_client, create_user, valid_user: dict):
-    create_response: Response = create_user(valid_user)
-    assert create_response.status_code == HTTPStatus.OK
-
     response: Response = api_client.delete(f"{api_client.base_url}/users/{valid_user['id']}")
     assert response.status_code == HTTPStatus.OK
 
@@ -77,9 +68,8 @@ def test_create_user_invalid_data(api_client, invalid_user: dict):
     (30, 3, 10),
     (5, 1, 1),
 ])
-def test_pagination(api_client, create_user, valid_user, total_users, page, size):
-    for _ in range(total_users):
-        create_user(valid_user)
+def test_pagination(api_client, create_users, total_users, page, size):
+    create_users(total_users)
 
     response: Response = api_client.get(f"{api_client.base_url}/users?page={page}&size={size}")
     assert response.status_code == HTTPStatus.OK

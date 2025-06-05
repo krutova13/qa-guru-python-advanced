@@ -3,7 +3,6 @@ import os
 import dotenv as dotenv
 import pytest
 import requests
-from requests import Response
 
 PREFIX = "/api/v1"
 
@@ -35,19 +34,35 @@ def cleanup_database(api_client: requests.Session):
 
 
 @pytest.fixture
-def create_user(api_client: requests.Session):
-    def _create_user(user_data: dict) -> Response:
-        return api_client.post(f"{api_client.base_url}/users", json=user_data)
-
-    return _create_user
+def create_user(api_client: requests.Session, valid_user):
+    api_client.post(f"{api_client.base_url}/users", json=valid_user)
 
 
 @pytest.fixture
-def create_product(api_client: requests.Session):
-    def _create_product(product_data: dict) -> Response:
-        return api_client.post(f"{api_client.base_url}/products", json=product_data)
+def create_product(api_client: requests.Session, valid_product):
+    api_client.post(f"{api_client.base_url}/products", json=valid_product)
 
-    return _create_product
+
+@pytest.fixture
+def create_users(api_client, valid_user):
+    _delete_items(api_client, "users")
+
+    def _create(count):
+        for _ in range(count):
+            api_client.post(f"{api_client.base_url}/users", json=valid_user)
+
+    return _create
+
+
+@pytest.fixture
+def create_products(api_client, valid_product):
+    _delete_items(api_client, "products")
+
+    def _create(count):
+        for _ in range(count):
+            api_client.post(f"{api_client.base_url}/products", json=valid_product)
+
+    return _create
 
 
 @pytest.fixture
@@ -98,3 +113,11 @@ def get_all_items(api_client: requests.Session, endpoint: str) -> list:
             break
         page += 1
     return all_items
+
+
+def _delete_items(api_client: requests.Session, endpoint: str):
+    response = api_client.get(f"{api_client.base_url}/{endpoint}")
+    items = response.json()["items"]
+    if items:
+        for item in items:
+            api_client.delete(f"{api_client.base_url}/{endpoint}/{item['id']}")

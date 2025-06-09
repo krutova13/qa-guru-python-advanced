@@ -7,6 +7,21 @@ import requests
 PREFIX = "/api/v1"
 
 
+def create_id_counter():
+    counter = 0
+
+    def get_next_id():
+        nonlocal counter
+        counter += 1
+        return counter
+
+    return get_next_id
+
+
+get_next_user_id = create_id_counter()
+get_next_product_id = create_id_counter()
+
+
 @pytest.fixture(autouse=True)
 def envs():
     dotenv.load_dotenv()
@@ -49,7 +64,9 @@ def create_users(api_client, valid_user):
 
     def _create(count):
         for _ in range(count):
-            api_client.post(f"{api_client.base_url}/users", json=valid_user)
+            user_data = valid_user.copy()
+            user_data["id"] = get_next_user_id()
+            api_client.post(f"{api_client.base_url}/users", json=user_data)
 
     return _create
 
@@ -60,7 +77,9 @@ def create_products(api_client, valid_product):
 
     def _create(count):
         for _ in range(count):
-            api_client.post(f"{api_client.base_url}/products", json=valid_product)
+            product_data = valid_product.copy()
+            product_data["id"] = get_next_product_id()
+            api_client.post(f"{api_client.base_url}/products", json=product_data)
 
     return _create
 
@@ -68,7 +87,7 @@ def create_products(api_client, valid_product):
 @pytest.fixture
 def valid_user() -> dict:
     return {
-        "id": 1,
+        "id": get_next_user_id(),
         "name": "Test",
         "surname": "Testov",
         "birth_date": "01.10.1995",
@@ -79,7 +98,7 @@ def valid_user() -> dict:
 @pytest.fixture
 def invalid_user() -> dict:
     return {
-        "id": 2,
+        "id": get_next_user_id(),
         "name": "Test",
         "surname": "Testov",
         "birth_date": "invalid-date",
@@ -90,7 +109,7 @@ def invalid_user() -> dict:
 @pytest.fixture
 def valid_product() -> dict:
     return {
-        "id": 3,
+        "id": get_next_product_id(),
         "title": "Test Product",
         "description": "Test Description",
         "price": 100.0,

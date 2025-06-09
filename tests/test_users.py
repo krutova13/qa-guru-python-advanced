@@ -1,3 +1,4 @@
+import math
 from http import HTTPStatus
 from typing import List
 
@@ -68,7 +69,7 @@ def test_create_user_invalid_data(api_client, invalid_user: dict):
     (30, 3, 10),
     (5, 1, 1),
 ])
-def test_pagination(api_client, create_users, total_users, page, size):
+def test_pagination_valid_items_count(api_client, create_users, total_users, page, size):
     create_users(total_users)
 
     response: Response = api_client.get(f"{api_client.base_url}/users?page={page}&size={size}")
@@ -76,3 +77,36 @@ def test_pagination(api_client, create_users, total_users, page, size):
 
     data = response.json()
     validate_paginated_response(data, page, size, total_users)
+
+
+@pytest.mark.parametrize("size", [1, 5, 10, 15, 16])
+def test_pagination_valid_pages_count(api_client, create_users, size: int):
+    total_users: int = 15
+    create_users(total_users)
+
+    total_pages = math.ceil(total_users / size)
+
+    response = api_client.get(f"{api_client.base_url}/users?size={size}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["pages"] == total_pages
+
+
+def test_pagination_page_switch(api_client, create_users):
+    total_users: int = 15
+    page1: int = 1
+    page2: int = 2
+    size: int = 10
+
+    create_users(total_users)
+
+    response1: Response = api_client.get(f"{api_client.base_url}/users?page={page1}&size={size}")
+    response2: Response = api_client.get(f"{api_client.base_url}/users?page={page2}&size={size}")
+
+    assert response1.status_code == HTTPStatus.OK
+    assert response2.status_code == HTTPStatus.OK
+
+    items1 = response1.json()["items"]
+    items2 = response2.json()["items"]
+
+    assert items1 != items2

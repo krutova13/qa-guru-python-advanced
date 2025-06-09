@@ -1,3 +1,4 @@
+import math
 from http import HTTPStatus
 
 import pytest as pytest
@@ -93,3 +94,36 @@ def test_pagination(api_client, create_products, total_products, page, size):
 
     data = response.json()
     validate_paginated_response(data, page, size, total_products)
+
+
+@pytest.mark.parametrize("size", [1, 5, 10, 15, 16])
+def test_pagination_valid_products_count(api_client, create_products, size: int):
+    total_products: int = 15
+    create_products(total_products)
+
+    total_pages = math.ceil(total_products / size)
+
+    response = api_client.get(f"{api_client.base_url}/products?size={size}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["pages"] == total_pages
+
+
+def test_pagination_page_switch(api_client, create_products):
+    total_products: int = 15
+    page1: int = 1
+    page2: int = 2
+    size: int = 10
+
+    create_products(total_products)
+
+    response1: Response = api_client.get(f"{api_client.base_url}/products?page={page1}&size={size}")
+    response2: Response = api_client.get(f"{api_client.base_url}/products?page={page2}&size={size}")
+
+    assert response1.status_code == HTTPStatus.OK
+    assert response2.status_code == HTTPStatus.OK
+
+    items1 = response1.json()["items"]
+    items2 = response2.json()["items"]
+
+    assert items1 != items2

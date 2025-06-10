@@ -1,7 +1,7 @@
 from fastapi import Depends
 from fastapi_pagination import Params
 
-from app.models.user import User, Product
+from app.models.models import User, Product
 from app.services.product_service import ProductService
 from app.services.user_service import UserService
 from app.storage.base_storage import BaseStorage
@@ -22,10 +22,10 @@ def get_product_storage() -> BaseStorage[Product]:
 
 
 def get_user_service(
-        storage: BaseStorage[User] = Depends(get_user_storage),
+        user_storage: BaseStorage[User] = Depends(get_user_storage),
         product_storage: BaseStorage[Product] = Depends(get_product_storage)
 ) -> UserService:
-    return UserService(storage, product_storage)
+    return UserService(user_storage, product_storage)
 
 
 def get_product_service(storage: BaseStorage[Product] = Depends(get_product_storage)) -> ProductService:

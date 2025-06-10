@@ -1,4 +1,6 @@
-from app.models.user import Product
+from typing import Iterable
+
+from app.models.models import Product
 from app.storage.base_storage import BaseStorage
 
 
@@ -10,7 +12,7 @@ class ProductService:
         return self.storage.save(product_data)
 
     def get_products(self) -> list[Product]:
-        return self.storage.get()
+        return self.storage.get_all()
 
     def get_product_by_id(self, product_id: int) -> Product | None:
         return self.storage.get_by_id(product_id)

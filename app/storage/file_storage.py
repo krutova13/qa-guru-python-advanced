@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import TypeVar, Generic, Type
 
-from app.models.user import User, Product
+from app.models.models import User, Product
 from app.storage.base_storage import BaseStorage
 
 T = TypeVar('T')
@@ -34,7 +34,7 @@ class FileStorage(BaseStorage[T], Generic[T]):
         self._write_data(data)
         return obj
 
-    def get(self) -> list[T]:
+    def get_all(self) -> list[T]:
         data = self._read_data()
         return [self.model_type.model_validate(item) for item in data]
 
@@ -44,6 +44,9 @@ class FileStorage(BaseStorage[T], Generic[T]):
             if item.get("id") == id:
                 return self.model_type.model_validate(item)
         return None
+
+    def update(self, obj: T, id: int) -> T | None:
+        pass
 
     def delete(self, id: str) -> T | None:
         data = self._read_data()

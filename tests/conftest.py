@@ -3,23 +3,16 @@ import os
 import dotenv as dotenv
 import pytest
 import requests
+from sqlmodel import Session, create_engine
+
+from app.models.models import User, Product
 
 PREFIX = "/api/v1"
 
 
-def create_id_counter():
-    counter = 0
-
-    def get_next_id():
-        nonlocal counter
-        counter += 1
-        return counter
-
-    return get_next_id
-
-
-get_next_user_id = create_id_counter()
-get_next_product_id = create_id_counter()
+@pytest.fixture(scope="session", autouse=True)
+def envs():
+    dotenv.load_dotenv()
 
 
 @pytest.fixture(autouse=True)
@@ -38,24 +31,27 @@ def api_client(envs):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def cleanup_database(api_client: requests.Session):
+def cleanup_database():
     yield
-
-    for product in get_all_items(api_client, "products"):
-        api_client.delete(f"{api_client.base_url}/products/{product['id']}")
-
-    for user in get_all_items(api_client, "users"):
-        api_client.delete(f"{api_client.base_url}/users/{user['id']}")
-
-
-@pytest.fixture
-def create_user(api_client: requests.Session, valid_user):
-    api_client.post(f"{api_client.base_url}/users", json=valid_user)
+    engine = get_test_engine()
+    with Session(engine) as session:
+        session.query(Product).delete()
+        session.query(User).delete()
+        session.commit()
 
 
 @pytest.fixture
-def create_product(api_client: requests.Session, valid_product):
-    api_client.post(f"{api_client.base_url}/products", json=valid_product)
+def create_user(api_client: requests.Session, valid_user: dict) -> User:
+    response = api_client.post(f"{api_client.base_url}/users", json=valid_user)
+    return User(**response.json())
+
+
+@pytest.fixture
+def create_product(api_client: requests.Session, valid_product: dict, create_user: User) -> Product:
+    product_data = valid_product.copy()
+    product_data["user_id"] = create_user.id
+    response = api_client.post(f"{api_client.base_url}/products", json=product_data)
+    return Product(**response.json())
 
 
 @pytest.fixture
@@ -65,20 +61,19 @@ def create_users(api_client, valid_user):
     def _create(count):
         for _ in range(count):
             user_data = valid_user.copy()
-            user_data["id"] = get_next_user_id()
             api_client.post(f"{api_client.base_url}/users", json=user_data)
 
     return _create
 
 
 @pytest.fixture
-def create_products(api_client, valid_product):
+def create_products(api_client, valid_product, create_user):
     _delete_items(api_client, "products")
 
     def _create(count):
         for _ in range(count):
             product_data = valid_product.copy()
-            product_data["id"] = get_next_product_id()
+            product_data["user_id"] = create_user.id
             api_client.post(f"{api_client.base_url}/products", json=product_data)
 
     return _create
@@ -87,7 +82,6 @@ def create_products(api_client, valid_product):
 @pytest.fixture
 def valid_user() -> dict:
     return {
-        "id": get_next_user_id(),
         "name": "Test",
         "surname": "Testov",
         "birth_date": "01.10.1995",
@@ -98,7 +92,6 @@ def valid_user() -> dict:
 @pytest.fixture
 def invalid_user() -> dict:
     return {
-        "id": get_next_user_id(),
         "name": "Test",
         "surname": "Testov",
         "birth_date": "invalid-date",
@@ -109,12 +102,17 @@ def invalid_user() -> dict:
 @pytest.fixture
 def valid_product() -> dict:
     return {
-        "id": get_next_product_id(),
         "title": "Test Product",
         "description": "Test Description",
-        "price": 100.0,
-        "user_id": 1
+        "price": 100.0
     }
+
+
+def get_test_engine():
+    database_engine = os.getenv("DATABASE_ENGINE")
+    if not database_engine:
+        raise ValueError("DATABASE_ENGINE не найден в .env файле")
+    return create_engine(database_engine)
 
 
 def get_all_items(api_client: requests.Session, endpoint: str) -> list:

@@ -5,11 +5,13 @@ import pytest as pytest
 import requests as requests
 from requests import Response
 
-from app.models.product import Product
+from app.models.models import Product
 from tests.test_helpers import validate_paginated_response
 
 
-def test_create_product(api_client, valid_product: dict):
+def test_create_product(api_client, valid_product: dict, create_user):
+    valid_product["user_id"] = create_user.id
+
     create_response: Response = api_client.post(f"{api_client.base_url}/products", json=valid_product)
     assert create_response.status_code == HTTPStatus.OK
 
@@ -17,28 +19,28 @@ def test_create_product(api_client, valid_product: dict):
     assert product.title == valid_product["title"]
     assert product.description == valid_product["description"]
     assert product.price == valid_product["price"]
-    assert product.user_id == valid_product["user_id"]
+    assert product.user_id == create_user.id
 
-    get_response: Response = api_client.get(f"{api_client.base_url}/products/{valid_product['id']}")
-    assert get_response.status_code == HTTPStatus.OK
+    response = api_client.get(f"{api_client.base_url}/products/{product.id}")
+    assert response.status_code == HTTPStatus.OK
 
 
-def test_get_all_products(api_client, create_product, valid_product: dict):
+def test_get_all_products(api_client, create_product):
     response: Response = api_client.get(f"{api_client.base_url}/products")
     assert response.status_code == HTTPStatus.OK
 
-    products = [Product.model_validate(product) for product in response.json()["items"]]
+    products: list[Product] = [Product.model_validate(product) for product in response.json()["items"]]
     assert len(products) > 0
-    assert any(product.id == valid_product["id"] for product in products)
+    assert any(create_product.id == product.id for product in products)
 
 
-def test_get_product_by_id(api_client, create_product, valid_product: dict):
-    response: Response = api_client.get(f"{api_client.base_url}/products/{valid_product['id']}")
+def test_get_product_by_id(api_client, create_product):
+    response: Response = api_client.get(f"{api_client.base_url}/products/{create_product.id}")
     assert response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(response.json())
-    assert product.id == valid_product["id"]
-    assert product.title == valid_product["title"]
+    assert create_product.id == product.id
+    assert create_product.title == product.title
 
 
 def test_get_nonexistent_product(api_client):
@@ -46,36 +48,35 @@ def test_get_nonexistent_product(api_client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_product(api_client, create_product, valid_product: dict):
-    response: Response = api_client.delete(f"{api_client.base_url}/products/{valid_product['id']}")
+def test_delete_product(api_client, create_product):
+    response: Response = api_client.delete(f"{api_client.base_url}/products/{create_product.id}")
     assert response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(response.json())
-    assert product.id == valid_product["id"]
+    assert create_product.id == product.id
 
-    get_response: Response = api_client.get(f"{api_client.base_url}/products/{valid_product['id']}")
+    get_response = api_client.get(f"{api_client.base_url}/products/{product.id}")
     assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_get_user_products(api_client, create_user, create_product, valid_user: dict, valid_product: dict) -> None:
-    response: Response = api_client.get(f"{api_client.base_url}/users/{valid_product['user_id']}/products")
+def test_get_user_products(api_client, create_product):
+    response: Response = api_client.get(f"{api_client.base_url}/users/{create_product.user_id}/products")
     assert response.status_code == HTTPStatus.OK
 
     products: list[Product] = [Product.model_validate(product) for product in response.json()]
     assert len(products) > 0
-    assert any(product.id == valid_product["id"] for product in products)
+    assert any(create_product.id == product.id for product in products)
 
 
-def test_get_user_product(api_client: requests.Session, create_user, create_product, valid_user: dict,
-                          valid_product: dict):
+def test_get_user_product(api_client: requests.Session, create_user, create_product):
     response: Response = api_client.get(
-        f"{api_client.base_url}/users/{valid_user['id']}/products/{valid_product['id']}"
+        f"{api_client.base_url}/users/{create_user.id}/products/{create_product.id}"
     )
     assert response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(response.json())
-    assert product.id == valid_product["id"]
-    assert product.title == valid_product["title"]
+    assert product.id == create_product.id
+    assert product.title == create_product.title
 
 
 @pytest.mark.parametrize("total_products, page, size", [

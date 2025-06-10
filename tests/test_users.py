@@ -1,12 +1,11 @@
 import math
 from http import HTTPStatus
-from typing import List
 
 import pytest as pytest
 from requests import Response
 
-from app.models.user import User
-from tests.test_helpers import validate_paginated_response
+from app.models.models import User
+from tests.test_helperщs import validate_paginated_response
 
 
 def test_create_user(api_client, valid_user: dict):
@@ -18,26 +17,52 @@ def test_create_user(api_client, valid_user: dict):
     assert user.surname == valid_user["surname"]
     assert user.birth_date == valid_user["birth_date"]
 
-    response: Response = api_client.get(f"{api_client.base_url}/users/{valid_user['id']}")
+    response = api_client.get(f"{api_client.base_url}/users/{user.id}")
     assert response.status_code == HTTPStatus.OK
 
 
-def test_get_all_users(api_client, create_user, valid_user: dict):
+def test_get_all_users(api_client, create_user: User):
     response: Response = api_client.get(f"{api_client.base_url}/users")
     assert response.status_code == HTTPStatus.OK
 
-    users: List[User] = [User.model_validate(user) for user in response.json()["items"]]
+    users: list[User] = [User.model_validate(user) for user in response.json()["items"]]
     assert len(users) > 0
-    assert any(user.id == valid_user["id"] for user in users)
+    assert any(create_user.id == user.id for user in users)
 
 
-def test_get_user_by_id(api_client, create_user, valid_user: dict):
-    response: Response = api_client.get(f"{api_client.base_url}/users/{valid_user['id']}")
+def test_get_user_by_id(api_client, create_user: User):
+    response: Response = api_client.get(f"{api_client.base_url}/users/{create_user.id}")
     assert response.status_code == HTTPStatus.OK
 
-    user = User.model_validate(response.json())
-    assert user.id == valid_user["id"]
-    assert user.name == valid_user["name"]
+    user: User = User.model_validate(response.json())
+    assert create_user.id == user.id
+    assert create_user.name == user.name
+
+
+def test_update_user_by_id(api_client, create_user: User):
+    get_response: Response = api_client.get(f"{api_client.base_url}/users/{create_user.id}")
+    assert get_response.status_code == HTTPStatus.OK
+    update_user = {
+        "name": "Nastya",
+        "surname": "Artemova",
+        "birth_date": "16.10.1995",
+        "products": []
+    }
+
+    update_response: Response = api_client.patch(f"{api_client.base_url}/users/{create_user.id}", json=update_user)
+    assert get_response.status_code == HTTPStatus.OK
+
+    up_user: User = User.model_validate(update_response.json())
+    assert create_user.id == up_user.id
+    assert update_user.get("name") == up_user.name
+    assert update_user.get("surname") == up_user.surname
+
+    response: Response = api_client.get(f"{api_client.base_url}/users/{create_user.id}")
+    assert get_response.status_code == HTTPStatus.OK
+
+    user: User = User.model_validate(response.json())
+    assert update_user.get("name") == user.name
+    assert update_user.get("surname") == user.surname
 
 
 def test_get_nonexistent_user(api_client):
@@ -45,14 +70,24 @@ def test_get_nonexistent_user(api_client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_user(api_client, create_user, valid_user: dict):
-    response: Response = api_client.delete(f"{api_client.base_url}/users/{valid_user['id']}")
+def test_delete_nonexistent_user(api_client):
+    response: Response = api_client.delete(f"{api_client.base_url}/users/99999")
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_update_nonexistent_user(api_client, valid_user):
+    response: Response = api_client.patch(f"{api_client.base_url}/users/99999", json=valid_user)
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_delete_user(api_client, create_user: User):
+    response: Response = api_client.delete(f"{api_client.base_url}/users/{create_user.id}")
     assert response.status_code == HTTPStatus.OK
 
     user = User.model_validate(response.json())
-    assert user.id == valid_user["id"]
+    assert create_user.id == user.id
 
-    get_response: Response = api_client.get(f"{api_client.base_url}/users/{valid_user['id']}")
+    get_response = api_client.get(f"{api_client.base_url}/users/{user.id}")
     assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 

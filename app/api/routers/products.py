@@ -4,7 +4,7 @@ from fastapi_pagination import paginate, Page
 from app.api.dependencies import get_product_service, CustomParams
 from app.core.decorators import handle_exceptions
 from app.exceptions.exceptions import NotFoundException
-from app.models.user import Product
+from app.models.models import Product, ProductCreate
 from app.services.product_service import ProductService
 
 products_router = APIRouter(prefix="/products", tags=["products"])
@@ -29,8 +29,9 @@ def get_product_by_id(product_id: int, product_service: ProductService = Depends
 
 @handle_exceptions
 @products_router.post("", response_model=Product)
-def create_product(product: Product, product_service: ProductService = Depends(get_product_service)) -> Product:
-    return product_service.create_product(product)
+def create_product(product: ProductCreate, product_service: ProductService = Depends(get_product_service)) -> Product:
+    db_product = Product(**product.dict())
+    return product_service.create_product(db_product)
 
 
 @handle_exceptions

@@ -1,28 +1,25 @@
-from app.models.product import Product
-from app.models.user import User
+from app.models.models import User, Product
+from app.models.models import UserUpdate
 from app.services.product_service import ProductService
 from app.storage.base_storage import BaseStorage
 
 
 class UserService:
-    def __init__(self, storage: BaseStorage, product_storage: BaseStorage):
-        self.storage = storage
+    def __init__(self, user_storage: BaseStorage, product_storage: BaseStorage):
+        self.storage = user_storage
         self.product_storage = product_storage
 
     def create_user(self, user_data: User) -> User:
         return self.storage.save(user_data)
 
     def get_users(self) -> list[User]:
-        users = self.storage.get()
-        for user in users:
-            self._load_user_products(user)
-        return users
+        return self.storage.get_all()
 
     def get_user_by_id(self, user_id: int) -> User | None:
-        user = self.storage.get_by_id(user_id)
-        if user:
-            self._load_user_products(user)
-        return user
+        return self.storage.get_by_id(user_id)
+
+    def update_user(self, user_id: int, user: UserUpdate):
+        return self.storage.update(user_id, user)
 
     def delete_user(self, user_id: int) -> User | None:
         return self.storage.delete(user_id)
@@ -31,7 +28,14 @@ class UserService:
         user = self.get_user_by_id(user_id)
         if not user:
             return []
-        return user.products
+
+        product_service = ProductService(self.product_storage)
+        product = product_service.get_products_by_user_id(user_id)
+
+        if not product:
+            return []
+
+        return product
 
     def get_user_product(self, user_id: int, product_id: int) -> Product | None:
         user = self.get_user_by_id(user_id)
@@ -45,7 +49,3 @@ class UserService:
             return None
 
         return product
-
-    def _load_user_products(self, user: User) -> None:
-        product_service = ProductService(self.product_storage)
-        user.products = product_service.get_products_by_user_id(user.id)

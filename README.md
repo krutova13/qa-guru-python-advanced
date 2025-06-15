@@ -1,32 +1,17 @@
-# FastAPI Проект
+# FastAPI Project
 
-Проект представляет собой REST API сервис, разработанный с использованием FastAPI. Сервис предоставляет функциональность для управления пользователями и их продуктами.
+Проект на FastAPI с использованием SQLModel для работы с базой данных PostgreSQL.
 
-## Функциональность
+## Требования
 
-- Управление пользователями (создание, получение, удаление)
-- Управление продуктами (создание, получение, удаление)
-- Связь между пользователями и их продуктами
-- Валидация данных с использованием Pydantic
-- Хранение данных в JSON файлах
+- Python 3.13+
+- PostgreSQL
+- Poetry (для управления зависимостями)
+- Docker и Docker Compose (для запуска в контейнерах)
 
-## Технологии
+## Установка и запуск
 
-- Python 3.11+
-- FastAPI
-- Pydantic
-- Pytest
-- Requests
-- JSON Schema
-
-## Хранение данных
-
-Проект использует файловое хранилище на основе JSON файлов:
-- `app/storage/users.json` - хранит данные пользователей
-- `app/storage/products.json` - хранит данные продуктов
-
-
-## Установка
+### Вариант 1: Локальная установка
 
 1. Клонируйте репозиторий:
 ```bash
@@ -34,102 +19,99 @@ git clone <repository-url>
 cd fastApiProject
 ```
 
-2. Создайте виртуальное окружение и активируйте его:
+2. Установите зависимости:
 ```bash
-python -m venv venv
-source venv/bin/activate  # для Linux/Mac
-# или
-venv\Scripts\activate  # для Windows
+poetry install
 ```
 
-3. Установите зависимости:
-```bash
-pip install -r requirements.txt
+3. Создайте файл `.env` в корневой директории проекта:
+```env
+APP_URL=
+DATABASE_ENGINE=
+DATABASE_POOL_SIZE=
+STORAGE_TYPE=
+HOST=localhost
+PORT=8000
 ```
 
-## Запуск
-
-1. Запустите сервер:
+4. Запустите сервер:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+poetry run python app/main.py
 ```
 
-2. API будет доступно по адресу: http://localhost:8001/api/v1
+### Вариант 2: Запуск в Docker
 
-## Тестирование
-
-Для запуска тестов выполните:
+1. Клонируйте репозиторий:
 ```bash
-pytest
+git clone <repository-url>
+cd fastApiProject
 ```
 
-Тесты включают:
-- Проверку создания пользователей и продуктов
-- Валидацию данных
-- Проверку связей между пользователями и продуктами
-- Обработку ошибок
+2. Создайте файл `.env` в корневой директории проекта:
+```env
+APP_URL=
+DATABASE_URL=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+```
+
+3. Запустите приложение с помощью Docker Compose:
+```bash
+docker-compose up --build
+```
+
+Приложение будет доступно по адресу: http://localhost:8000
+
+## Структура Docker
+
+Проект использует два контейнера:
+- `app` - FastAPI приложение
+- `db` - PostgreSQL база данных
+
+Контейнеры связаны между собой через Docker network, что обеспечивает:
+- Изоляцию окружения
+- Простоту развертывания
+- Масштабируемость
+- Управление зависимостями
 
 ## API Endpoints
 
 ### Пользователи
 
-- `POST /api/v1/users` - Создание пользователя
-- `GET /api/v1/users` - Получение списка всех пользователей
-- `GET /api/v1/users/{user_id}` - Получение пользователя по ID
-- `DELETE /api/v1/users/{user_id}` - Удаление пользователя
+- `GET /api/v1/users` - Получить список пользователей
+- `POST /api/v1/users` - Создать пользователя
+- `GET /api/v1/users/{user_id}` - Получить пользователя по ID
+- `PATCH /api/v1/users/{user_id}` - Обновить пользователя
+- `DELETE /api/v1/users/{user_id}` - Удалить пользователя
+- `GET /api/v1/users/{user_id}/products` - Получить продукты пользователя
+- `GET /api/v1/users/{user_id}/products/{product_id}` - Получить конкретный продукт пользователя
 
 ### Продукты
 
-- `POST /api/v1/products` - Создание продукта
-- `GET /api/v1/products` - Получение списка всех продуктов
-- `GET /api/v1/products/{product_id}` - Получение продукта по ID
-- `DELETE /api/v1/products/{product_id}` - Удаление продукта
-- `GET /api/v1/users/{user_id}/products` - Получение продуктов пользователя
-- `GET /api/v1/users/{user_id}/products/{product_id}` - Получение конкретного продукта пользователя
+- `GET /api/v1/products` - Получить список продуктов
+- `POST /api/v1/products` - Создать продукт
+- `GET /api/v1/products/{product_id}` - Получить продукт по ID
+- `DELETE /api/v1/products/{product_id}` - Удалить продукт
 
-## Примеры использования
+## Тестирование
 
-### Создание пользователя
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8001/api/v1/users",
-    json={
-        "id": 1,
-        "name": "Иван",
-        "surname": "Иванов",
-        "birth_date": "01.01.1990",
-        "products": []
-    }
-)
+### Локальное тестирование
+```bash
+poetry run pytest
 ```
 
-### Создание продукта
-```python
-response = requests.post(
-    "http://localhost:8001/api/v1/products",
-    json={
-        "id": 1,
-        "title": "Тестовый продукт",
-        "description": "Описание продукта",
-        "price": 100.0,
-        "user_id": 1
-    }
-)
+### Тестирование в Docker
+```bash
+docker-compose run app pytest
 ```
 
-## Валидация данных
+## Особенности проекта
 
-API использует Pydantic для валидации данных. Примеры валидации:
-
-- Дата рождения должна быть в формате "DD.MM.YYYY"
-- Цена продукта должна быть положительным числом
-- ID пользователя должен существовать при создании продукта
-
-## Обработка ошибок
-
-API возвращает следующие коды состояния:
-- 200: Успешный запрос
-- 404: Ресурс не найден
-- 422: Ошибка валидации данных
+1. Использование SQLModel для работы с базой данных
+2. Пагинация для списков пользователей и продуктов
+3. Валидация данных с помощью Pydantic
+4. Обработка ошибок и исключений
+5. Тесты с использованием pytest
+6. Документация API (доступна по адресу http://localhost:8000/docs)
+7. Контейнеризация с помощью Docker
+8. Автоматическое создание и настройка базы данных при запуске

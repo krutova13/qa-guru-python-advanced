@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Type
+from typing import Generic, TypeVar, Type, Iterable
 
 T = TypeVar('T')
 
 
 class BaseStorage(Generic[T], ABC):
-
-    def __int__(self, model_type: Type[T]):
+    def __init__(self, model_type: Type[T]):
         self.model_type = model_type
 
     @abstractmethod
@@ -14,11 +13,15 @@ class BaseStorage(Generic[T], ABC):
         pass
 
     @abstractmethod
-    def get(self) -> list[T]:
+    def get_all(self, page: int = 1, size: int = 10) -> list[T]:
         pass
 
     @abstractmethod
     def get_by_id(self, id: int) -> T | None:
+        pass
+
+    @abstractmethod
+    def update(self, id: int, obj: T) -> T | None:
         pass
 
     @abstractmethod

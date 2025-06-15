@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 import dotenv
 
@@ -10,15 +11,22 @@ from app.storage.database_engine import create_db_and_tables
 
 from app.api.routers import router
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_db_and_tables()
+    yield
+
+
 app = FastAPI(
     title="FastAPI Project",
     description="API для пользователей и их продуктов",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
+
 add_pagination(app)
 app.include_router(router, prefix="/api/v1")
-
-create_db_and_tables()
 
 if __name__ == "__main__":
     import uvicorn

@@ -5,7 +5,7 @@ import pytest as pytest
 from requests import Response
 
 from app.models.models import User
-from tests.test_helperщs import validate_paginated_response
+from tests.test_helpers import validate_paginated_response
 
 
 def test_create_user(api_client, valid_user: dict):

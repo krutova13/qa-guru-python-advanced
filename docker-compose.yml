@@ -6,7 +6,7 @@ services:
   app:
     build: .
     environment:
-      DATABASE_ENGINE: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/postgres
+      DATABASE_ENGINE: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_USER}
       DATABASE_POOL_SIZE: 10
       STORAGE_TYPE: database
     ports:
@@ -20,6 +20,7 @@ services:
     restart: always
     shm_size: 128mb
     environment:
+      POSTGRES_USER:
       POSTGRES_PASSWORD:
     volumes:
       - db-data:/var/lib/postgresql/data

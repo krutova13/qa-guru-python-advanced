@@ -1,3 +1,6 @@
+[tool.pytest.ini_options]
+pythonpath = '.'
+
 [tool.poetry]
 name = "fastapiproject"
 version = "0.1.0"

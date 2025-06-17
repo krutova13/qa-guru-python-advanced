@@ -41,7 +41,7 @@ jobs:
         run: poetry run pytest tests
         env:
           APP_URL: http://localhost:8000
-          DATABASE_ENGINE: postgresql+psycopg2://${{ env.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@db:5432/${{ env.POSTGRES_USER }}
+          DATABASE_ENGINE: postgresql+psycopg2://${{ env.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_USER }}
 
       - run: docker compose logs app
         if: always()

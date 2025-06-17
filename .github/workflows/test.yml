@@ -1,0 +1,50 @@
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  tests:
+    name: Test app
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER=postgres
+      POSTGRES_PASSWORD=example
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Cache Poetry virtualenvs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-venv-${{ runner.os }}-
+      - name: Install dependencies (with Poetry)
+        run: |
+          poetry install --no-interaction --no-ansi
+      - name: Build docker-compose
+        run: docker compose -build
+      - name: Run docker-compose
+        run: docker compose up -d
+      - name: Run tests
+        run: pytest tests
+        env:
+          APP_URL=http://localhost:8000
+          DATABASE_ENGINE=postgresql+psycopg2://postgres:example@localhost:5432/postgres
+
+      - run: docker compose logs app
+        if: always()
+
+      - name: Surface failing tests
+        if: always()
+        uses: pmeier/pytest-results-action@main
+        with:
+          path: test-results.xml
+          summary: true
+          display-options: fEX
+          fail-on-empty: true
+          title: Test results

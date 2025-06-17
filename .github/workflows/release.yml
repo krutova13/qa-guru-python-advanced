@@ -28,12 +28,9 @@ jobs:
           restore-keys: |
             poetry-venv-${{ runner.os }}-
       - name: Install dependencies (with Poetry)
-        run: |
-          poetry install --no-interaction --no-ansi
-      - name: Build docker-compose
-        run: docker compose -build
+        run: poetry install --no-interaction --no-ansi
       - name: Run docker-compose
-        run: docker compose up -d
+        run: docker compose up -d --build
       - name: Run tests
         run: pytest tests
         env:

@@ -38,7 +38,7 @@ jobs:
             sleep 2
           done
       - name: Run tests
-        run: poetry run pytest tests --junitxml=test-results.xml
+        run: poetry run pytest test_framework/tests --junitxml=test-results.xml
         env:
           APP_URL: http://localhost:8000
           DATABASE_ENGINE: postgresql+psycopg2://${{ env.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_USER }}

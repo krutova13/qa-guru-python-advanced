@@ -9,8 +9,8 @@ from test_framework.clients.user_client import UsersApiClient
 from test_framework.tests.test_helpers import validate_paginated_response
 
 
-def test_create_user(env: str, valid_user: UserCreate):
-    create_response: Response = UsersApiClient(env).create_user(valid_user.model_dump())
+def test_create_user(valid_user: UserCreate, users_api):
+    create_response: Response = users_api.create_user(valid_user.model_dump())
     assert create_response.status_code == HTTPStatus.OK
 
     user: User = User.model_validate(create_response.json())
@@ -18,12 +18,12 @@ def test_create_user(env: str, valid_user: UserCreate):
     assert user.surname == valid_user.surname
     assert user.birth_date == valid_user.birth_date
 
-    response = UsersApiClient(env).get_user_by_id(user.id)
+    response = users_api.get_user_by_id(user.id)
     assert response.status_code == HTTPStatus.OK
 
 
-def test_get_all_users(env: str, create_user: User, cleanup_database):
-    response: Response = UsersApiClient(env).get_all_users()
+def test_get_all_users(create_user: User, cleanup_database, users_api):
+    response: Response = users_api.get_all_users()
     assert response.status_code == HTTPStatus.OK
 
     users: list[User] = [User.model_validate(user) for user in response.json()["items"]]
@@ -31,8 +31,8 @@ def test_get_all_users(env: str, create_user: User, cleanup_database):
     assert any(create_user.id == user.id for user in users)
 
 
-def test_get_user_by_id(env: str, create_user: User):
-    response: Response = UsersApiClient(env).get_user_by_id(create_user.id)
+def test_get_user_by_id(create_user: User, users_api):
+    response: Response = users_api.get_user_by_id(create_user.id)
     assert response.status_code == HTTPStatus.OK
 
     user: User = User.model_validate(response.json())
@@ -40,8 +40,8 @@ def test_get_user_by_id(env: str, create_user: User):
     assert create_user.name == user.name
 
 
-def test_update_user_by_id(env: str, create_user: User):
-    get_response: Response = UsersApiClient(env).get_user_by_id(create_user.id)
+def test_update_user_by_id(create_user: User, users_api):
+    get_response: Response = users_api.get_user_by_id(create_user.id)
     assert get_response.status_code == HTTPStatus.OK
     update_user: UserUpdate = UserUpdate(
         name="Nastya",
@@ -50,7 +50,7 @@ def test_update_user_by_id(env: str, create_user: User):
         products=[]
     )
 
-    update_response: Response = UsersApiClient(env).update_user(create_user.id, user_update=update_user)
+    update_response: Response = users_api.update_user(create_user.id, user_update=update_user)
     assert get_response.status_code == HTTPStatus.OK
 
     up_user: User = User.model_validate(update_response.json())
@@ -58,7 +58,7 @@ def test_update_user_by_id(env: str, create_user: User):
     assert update_user.name == up_user.name
     assert update_user.surname == up_user.surname
 
-    response: Response = UsersApiClient(env).get_user_by_id(create_user.id)
+    response: Response = users_api.get_user_by_id(create_user.id)
     assert get_response.status_code == HTTPStatus.OK
 
     user: User = User.model_validate(response.json())
@@ -66,24 +66,24 @@ def test_update_user_by_id(env: str, create_user: User):
     assert update_user.surname == user.surname
 
 
-def test_get_nonexistent_user(env: str):
-    response: Response = UsersApiClient(env).get_user_by_id(99999)
+def test_get_nonexistent_user(users_api):
+    response: Response = users_api.get_user_by_id(99999)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_nonexistent_user(env: str):
-    response: Response = UsersApiClient(env).delete_user(99999)
+def test_delete_nonexistent_user(users_api):
+    response: Response = users_api.delete_user(99999)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_update_nonexistent_user(env: str):
+def test_update_nonexistent_user(users_api):
     update_user: UserUpdate = UserUpdate(
         name="Nastya",
         surname="Artemova",
         birth_date="16.10.1995",
         products=[]
     )
-    response: Response = UsersApiClient(env).update_user(99999, update_user)
+    response: Response = users_api.update_user(99999, update_user)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 

@@ -8,10 +8,10 @@ from app.models.models import Product, ProductCreate
 from test_framework.tests.test_helpers import validate_paginated_response
 
 
-def test_create_product(api_client, valid_product: ProductCreate, create_user):
+def test_create_product(products_api, valid_product: ProductCreate, create_user):
     valid_product.user_id = create_user.id
 
-    create_response: Response = api_client.post("/products", json=valid_product.model_dump())
+    create_response: Response = products_api.create_product(valid_product.model_dump())
     assert create_response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(create_response.json())
@@ -20,12 +20,12 @@ def test_create_product(api_client, valid_product: ProductCreate, create_user):
     assert product.price == valid_product.price
     assert product.user_id == create_user.id
 
-    response = api_client.get(f"/products/{product.id}")
+    response = products_api.get_product_by_id(product.id)
     assert response.status_code == HTTPStatus.OK
 
 
-def test_get_all_products(api_client, create_product):
-    response: Response = api_client.get("/products")
+def test_get_all_products(products_api, create_product):
+    response: Response = products_api.get_all_products()
     assert response.status_code == HTTPStatus.OK
 
     products: list[Product] = [Product.model_validate(product) for product in response.json()["items"]]
@@ -33,8 +33,8 @@ def test_get_all_products(api_client, create_product):
     assert any(create_product.id == product.id for product in products)
 
 
-def test_get_product_by_id(api_client, create_product):
-    response: Response = api_client.get(f"/products/{create_product.id}")
+def test_get_product_by_id(products_api, create_product):
+    response: Response = products_api.get_product_by_id(create_product.id)
     assert response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(response.json())
@@ -42,19 +42,19 @@ def test_get_product_by_id(api_client, create_product):
     assert create_product.title == product.title
 
 
-def test_get_nonexistent_product(api_client):
-    response: Response = api_client.get("/products/99999")
+def test_get_nonexistent_product(products_api):
+    response: Response = products_api.get_product_by_id(99999)
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_product(api_client, create_product):
-    response: Response = api_client.delete(f"/products/{create_product.id}")
+def test_delete_product(products_api, create_product):
+    response: Response = products_api.delete_product(create_product.id)
     assert response.status_code == HTTPStatus.OK
 
     product = Product.model_validate(response.json())
     assert create_product.id == product.id
 
-    get_response = api_client.get(f"/products/{product.id}")
+    get_response = products_api.get_product_by_id(product.id)
     assert get_response.status_code == HTTPStatus.NOT_FOUND
 
 
@@ -66,10 +66,11 @@ def test_delete_product(api_client, create_product):
     (30, 3, 10),
     (5, 1, 1),
 ])
-def test_pagination(api_client, create_products, total_products, page, size):
+def test_pagination(products_api, create_products, total_products, page, size):
     create_products(total_products)
 
-    response: Response = api_client.get(f"/products?page={page}&size={size}")
+    params = {"page": page, "size": size}
+    response: Response = products_api.get_all_products(params=params)
     assert response.status_code == HTTPStatus.OK
 
     data = response.json()
@@ -77,19 +78,20 @@ def test_pagination(api_client, create_products, total_products, page, size):
 
 
 @pytest.mark.parametrize("size", [1, 5, 10, 15, 16])
-def test_pagination_valid_products_count(api_client, create_products, size: int):
+def test_pagination_valid_products_count(products_api, create_products, size: int):
     total_products: int = 15
     create_products(total_products)
 
     total_pages = math.ceil(total_products / size)
 
-    response = api_client.get(f"/products?size={size}")
+    params = {"size": size}
+    response = products_api.get_all_products(params=params)
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["pages"] == total_pages
 
 
-def test_pagination_page_switch(api_client, create_products):
+def test_pagination_page_switch(products_api, create_products):
     total_products: int = 15
     page1: int = 1
     page2: int = 2
@@ -97,8 +99,11 @@ def test_pagination_page_switch(api_client, create_products):
 
     create_products(total_products)
 
-    response1: Response = api_client.get(f"/products?page={page1}&size={size}")
-    response2: Response = api_client.get(f"/products?page={page2}&size={size}")
+    params1 = {"page": page1, "size": size}
+    params2 = {"page": page2, "size": size}
+
+    response1: Response = products_api.get_all_products(params=params1)
+    response2: Response = products_api.get_all_products(params=params2)
 
     assert response1.status_code == HTTPStatus.OK
     assert response2.status_code == HTTPStatus.OK

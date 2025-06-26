@@ -27,15 +27,28 @@ def env(request):
     return request.config.getoption("--env")
 
 
+@pytest.fixture(scope="function")
+def users_api(env):
+    api = UsersApiClient(env)
+    yield api
+    api.session.close()
+
+
+@pytest.fixture(scope="function")
+def products_api(env):
+    api = ProductsApiClient(env)
+    yield api
+    api.session.close()
+
+
 @pytest.fixture(scope='function')
 def api_client(env):
     with BaseSession(base_url=Server(env).service) as session:
         yield session
-    session.close()
 
 
 @pytest.fixture(scope="function", autouse=True)
-def cleanup_database(env):
+def cleanup_database():
     yield
     engine = get_test_engine()
     with Session(engine) as session:
